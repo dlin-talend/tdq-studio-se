@@ -43,6 +43,7 @@ import org.eclipse.ui.forms.editor.FormEditor;
 import org.eclipse.ui.forms.widgets.Section;
 import org.eclipse.ui.part.FileEditorInput;
 import org.talend.core.model.repository.ERepositoryObjectType;
+import org.talend.core.model.update.RepositoryUpdateManager;
 import org.talend.cwm.helper.TaggedValueHelper;
 import org.talend.dataprofiler.core.CorePlugin;
 import org.talend.dataprofiler.core.ImageLib;
@@ -375,6 +376,10 @@ public class PatternMasterDetailsPage extends AbstractMetadataFormPage implement
         // MOD yyi 2012-02-08 TDQ-4621:Explicitly set true for updating dependencies.
         ElementWriterFactory.getInstance().createPatternWriter().save(patternItem, true);
 
+        //TDQ-11688
+        RepositoryUpdateManager.updateDQPattern(patternItem);
+
+        
         return true;
     }
 
