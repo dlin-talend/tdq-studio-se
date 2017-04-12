@@ -1708,7 +1708,7 @@
            class="org.talend.dataprofiler.core.migration.impl.AddBenfordLaw4RedshiftTask"
            id="org.talend.dataprofiler.core.migration.impl.AddBenfordLaw4RedshiftTask"
            name="add or update Benford Law Indicator for Redshift Task"
-           version="6.4.1">
+           version="6.4.0">
      </workspacetask>
      <workspacetask
            class="org.talend.dataprofiler.core.migration.impl.AddExasolRegularExpressionMatchingTask"
