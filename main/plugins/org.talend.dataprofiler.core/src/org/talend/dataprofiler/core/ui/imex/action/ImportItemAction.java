@@ -17,16 +17,11 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.wizard.WizardDialog;
-import org.eclipse.ui.IEditorPart;
-import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.IWorkbenchWindowActionDelegate;
-import org.talend.dataprofiler.core.CorePlugin;
 import org.talend.dataprofiler.core.ImageLib;
 import org.talend.dataprofiler.core.i18n.internal.DefaultMessagesImpl;
-import org.talend.dataprofiler.core.ui.editor.CommonFormEditor;
 import org.talend.dataprofiler.core.ui.imex.ImportWizard;
-import org.talend.dataprofiler.core.ui.utils.MessageUI;
 import org.talend.repository.ui.actions.AContextualAction;
 
 /**
@@ -65,19 +60,6 @@ public class ImportItemAction extends AContextualAction implements IWorkbenchWin
      * @see org.eclipse.ui.IActionDelegate#run(org.eclipse.jface.action.IAction)
      */
     public void run(IAction action) {
-        IWorkbenchPage activePage = CorePlugin.getDefault().getWorkbench().getActiveWorkbenchWindow().getActivePage();
-        // TDQ-10715: only close the DQ editors before import items except the sql editor and text editor.
-        IEditorPart[] editors = activePage.getEditors();
-        for (IEditorPart editor : editors) {
-            if (editor instanceof CommonFormEditor) {
-                boolean isSaved = activePage.closeEditor(editor, true);
-                if (!isSaved) {
-                    MessageUI.openWarning(DefaultMessagesImpl.getString("ImportItemAction.closeEditors")); //$NON-NLS-1$
-                    return;
-                }
-            }
-        }
-        // TDQ-10715~
         ImportWizard wizard = new ImportWizard();
         WizardDialog dialog = new WizardDialog(null, wizard);
         dialog.setPageSize(550, 500);

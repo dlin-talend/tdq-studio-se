@@ -18,12 +18,17 @@ import org.apache.log4j.Logger;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.wizard.Wizard;
+import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IWorkbenchPage;
 import org.talend.commons.exception.ExceptionHandler;
 import org.talend.core.repository.model.ProxyRepositoryFactory;
 import org.talend.dataprofiler.core.CorePlugin;
+import org.talend.dataprofiler.core.i18n.internal.DefaultMessagesImpl;
+import org.talend.dataprofiler.core.ui.editor.CommonFormEditor;
 import org.talend.dataprofiler.core.ui.imex.model.IImportWriter;
 import org.talend.dataprofiler.core.ui.imex.model.ItemRecord;
 import org.talend.dataprofiler.core.ui.progress.ProgressUI;
+import org.talend.dataprofiler.core.ui.utils.MessageUI;
 
 /**
  * DOC bZhou class global comment. Detailled comment
@@ -52,13 +57,14 @@ public class ImportWizard extends Wizard {
     @Override
     public boolean performCancel() {
         final ItemRecord[] records = importPage.getElements();
-        final IImportWriter writer = importPage.getWriter();
-
-        try {
-            writer.finish(records, null);
-            writer.postFinish();
-        } catch (Exception e) {
-            ExceptionHandler.process(e);
+        if (records.length > 0) {
+            final IImportWriter writer = importPage.getWriter();
+            try {
+                writer.finish(records, null);
+                writer.postFinish();
+            } catch (Exception e) {
+                ExceptionHandler.process(e);
+            }
         }
 
         return super.performCancel();
@@ -71,6 +77,20 @@ public class ImportWizard extends Wizard {
      */
     @Override
     public boolean performFinish() {
+        // TDQ-10715: only close the DQ editors before import items except the sql editor and text editor.
+        // TDQ-13856: when click cancel, do NOT close any editors.
+        IWorkbenchPage activePage = CorePlugin.getDefault().getWorkbench().getActiveWorkbenchWindow().getActivePage();
+        IEditorPart[] editors = activePage.getEditors();
+        for (IEditorPart editor : editors) {
+            if (editor instanceof CommonFormEditor) {
+                boolean isSaved = activePage.closeEditor(editor, true);
+                if (!isSaved) {
+                    MessageUI.openWarning(DefaultMessagesImpl.getString("ImportItemAction.closeEditors")); //$NON-NLS-1$
+                    return true;
+                }
+            }
+        }
+        // TDQ-10715~
 
         // ADD xqliu TDQ-4284 2011-12-26
         if (ProxyRepositoryFactory.getInstance().isUserReadOnlyOnCurrentProject()) {
