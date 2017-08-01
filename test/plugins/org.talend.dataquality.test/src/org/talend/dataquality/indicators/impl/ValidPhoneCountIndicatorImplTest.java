@@ -12,13 +12,17 @@
 // ============================================================================
 package org.talend.dataquality.indicators.impl;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
+
+import java.util.Set;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.talend.dataquality.indicators.IndicatorParameters;
 import org.talend.dataquality.indicators.IndicatorsFactory;
 import org.talend.dataquality.indicators.TextParameters;
+
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
 
 /**
  * DOC qiongli class global comment. Detailled comment
@@ -59,6 +63,23 @@ public class ValidPhoneCountIndicatorImplTest {
 
         }
         assertEquals(0, validPhoneCountIndicatorImpl.getValidPhoneNumCount().longValue());
+    }
+
+    /**
+     * TDQ-14152: this method in libphonenumber only since 8.7.0, so i use this to test the lib is correctly upgraded.
+     */
+    @Test
+    public void testGetSupportedCallingCodes() {
+        Set<Integer> callingCodes = PhoneNumberUtil.getInstance().getSupportedCallingCodes();
+        assertTrue(callingCodes.size() > 0);
+        for (int callingCode : callingCodes) {
+            assertTrue(callingCode > 0);
+            assertTrue(PhoneNumberUtil.getInstance().getRegionCodeForCountryCode(callingCode) != "ZZ"); //$NON-NLS-1$
+        }
+        // There should be more than just the global network calling codes in this set.
+        assertTrue(callingCodes.size() > PhoneNumberUtil.getInstance().getSupportedGlobalNetworkCallingCodes().size());
+        // But they should be included. Testing one of them.
+        assertTrue(callingCodes.contains(979));
     }
 
 }
