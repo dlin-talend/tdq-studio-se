@@ -7,15 +7,12 @@ Bundle-Vendor: .Talend SA.
 Bundle-ClassPath: .,
  lib/carrier-1.29.jar,
  lib/geocoder-2.39.jar,
- lib/libphonenumber-7.3.0.jar,
+ lib/libphonenumber-8.7.0.jar,
  lib/prefixmapper-2.39.jar
 Require-Bundle: org.junit;bundle-version="3.8.2";resolution:=optional
 Bundle-ActivationPolicy: lazy
 Export-Package: com.google.i18n.phonenumbers,
  com.google.i18n.phonenumbers.geocoding,
  com.google.i18n.phonenumbers.internal,
- com.google.i18n.phonenumbers.nano,
- com.google.i18n.phonenumbers.prefixmapper,
- com.google.protobuf,
- com.google.protobuf.micro,
- com.google.protobuf.nano
+ com.google.i18n.phonenumbers,
+ com.google.i18n.phonenumbers.prefixmapper
