@@ -28,9 +28,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Path;
 import org.talend.core.model.metadata.builder.connection.DelimitedFileConnection;
 import org.talend.core.model.metadata.builder.database.JavaSqlFactory;
+import org.talend.core.utils.CsvArray;
+import org.talend.metadata.managment.ui.preview.ProcessDescription;
+import org.talend.metadata.managment.ui.utils.ShadowProcessHelper;
 
 import com.talend.csv.CSVReader;
 import com.talend.csv.CSVWriter;
@@ -61,6 +65,8 @@ public final class FileUtils {
     public static final char ESCAPE_CHAR = '\\';
 
     private static final char CURRENT_SEPARATOR = '\t';
+
+    private static final String ENCODING = "ISO-8859-15"; //$NON-NLS-1$
 
     /**
      * DOC bZhou Comment method "getName".
@@ -164,14 +170,21 @@ public final class FileUtils {
      * @return instance of CSVReader
      * @throws UnsupportedEncodingException
      * @throws FileNotFoundException
+     * @deprecated
      */
     public static CSVReader createCsvReader(File file, DelimitedFileConnection delimitedFileconnection)
             throws UnsupportedEncodingException, FileNotFoundException {
-        String separator = JavaSqlFactory.getFieldSeparatorValue(delimitedFileconnection);
+
+        // String separator = JavaSqlFactory.getFieldSeparatorValue(delimitedFileconnection);
         String encoding = JavaSqlFactory.getEncoding(delimitedFileconnection);
-        return new CSVReader(new BufferedReader(new InputStreamReader(new java.io.FileInputStream(file),
-                encoding == null ? "UTF-8" : encoding)), ParameterUtil //$NON-NLS-1$
-                .trimParameter(separator).charAt(0));
+        CSVReader csvReader = new CSVReader(new BufferedReader(new InputStreamReader(new java.io.FileInputStream(file),
+                encoding == null ? ENCODING : encoding)), ';');
+
+        csvReader.setQuoteChar('\"');
+
+        csvReader.setEscapeChar('\\');
+
+        return csvReader;
     }
 
     /**
@@ -240,4 +253,14 @@ public final class FileUtils {
         }
 
     }
+
+    public static CsvArray getArrayFromCsv(DelimitedFileConnection delimitedFileconnection, int limitValue, int headValue)
+            throws CoreException {
+        ProcessDescription processDescription = ShadowProcessHelper.getProcessDescription(delimitedFileconnection);
+        processDescription.setLimitRows(limitValue);
+        processDescription.setHeaderRow(headValue - 1);
+        return ShadowProcessHelper.getCsvArray(processDescription, "FILE_CSV", true); //$NON-NLS-1$
+
+    }
+
 }

@@ -19,11 +19,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.emf.common.util.EList;
 import org.talend.core.model.metadata.builder.connection.DelimitedFileConnection;
 import org.talend.core.model.metadata.builder.connection.MetadataColumn;
 import org.talend.core.model.metadata.builder.connection.MetadataTable;
 import org.talend.core.model.metadata.builder.database.JavaSqlFactory;
+import org.talend.core.utils.CsvArray;
 import org.talend.cwm.helper.ColumnHelper;
 import org.talend.dataquality.matchmerge.Attribute;
 import org.talend.dataquality.matchmerge.Record;
@@ -31,27 +33,25 @@ import org.talend.dataquality.record.linkage.grouping.swoosh.RichRecord;
 import org.talend.dq.helper.FileUtils;
 import orgomg.cwm.objectmodel.core.ModelElement;
 
-import com.talend.csv.CSVReader;
-
 /**
  * created by yyin on 2014-9-22 Detailled comment
  * 
  */
 public class FileCSVReader implements IFileReader {
 
-    private CSVReader csvReader = null;
+    private CsvArray csvArray = null;
 
     private int[] analysedColumnIndex;
 
     private String[] analysedColumnName;
 
-    private long csvLimitValue = 0;
+    private int csvLimitValue = 0;
 
     private int csvHeadValue = 0;
 
     private long index = 0;
 
-    private long currentRowIndex = -1;
+    private int currentRowIndex = -1;
     /*
      * (non-Javadoc)
      * 
@@ -59,14 +59,13 @@ public class FileCSVReader implements IFileReader {
      * org.talend.core.model.metadata.builder.connection.DelimitedFileConnection, java.util.List)
      */
     public FileCSVReader(File file, DelimitedFileConnection delimitedFileconnection, List<ModelElement> analysisElementList)
-            throws IOException, FileNotFoundException {
+            throws IOException, FileNotFoundException, CoreException {
         analysedColumnIndex = new int[analysisElementList.size()];
         analysedColumnName = new String[analysisElementList.size()];
 
         csvLimitValue = JavaSqlFactory.getLimitValue(delimitedFileconnection);
         csvHeadValue = JavaSqlFactory.getHeadValue(delimitedFileconnection);
-        csvReader = FileUtils.createCsvReader(file, delimitedFileconnection);
-        FileUtils.initializeCsvReader(delimitedFileconnection, csvReader);
+        csvArray = FileUtils.getArrayFromCsv(delimitedFileconnection, csvLimitValue, csvHeadValue);
 
         findElementPosition(analysisElementList);
     }
@@ -97,7 +96,9 @@ public class FileCSVReader implements IFileReader {
      * @see org.talend.cwm.db.connection.file.IFileReader#hasNext()
      */
     public boolean hasNext() throws IOException {
-        return csvReader.readNext();
+        currentRowIndex++;
+
+        return currentRowIndex < csvArray.getRows().size();
     }
 
     /*
@@ -106,7 +107,6 @@ public class FileCSVReader implements IFileReader {
      * @see org.talend.cwm.db.connection.file.IFileReader#next()
      */
     public Record next() throws IOException {
-        currentRowIndex++;
         if (currentRowIndex < csvHeadValue) {
             if (hasNext()) {
                 return next();
@@ -114,10 +114,11 @@ public class FileCSVReader implements IFileReader {
                 return null;
             }
         }
+
         if (csvLimitValue != -1 && currentRowIndex > csvLimitValue - 1) {
             return null;
         }
-        String[] values = csvReader.getValues();
+        String[] values = csvArray.getRows().get(currentRowIndex);
         String[] analysedValues = new String[analysedColumnIndex.length];
         for (int i = 0; i < analysedColumnIndex.length; i++) {
             analysedValues[i] = values[analysedColumnIndex[i]];
@@ -144,7 +145,7 @@ public class FileCSVReader implements IFileReader {
     }
 
     public void close() throws IOException {
-        this.csvReader.close();
+        // this.csvReader.close();
     }
 
 }

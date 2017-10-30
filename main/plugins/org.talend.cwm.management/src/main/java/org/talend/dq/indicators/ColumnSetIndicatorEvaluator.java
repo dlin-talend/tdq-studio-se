@@ -13,7 +13,6 @@
 package org.talend.dq.indicators;
 
 import java.io.File;
-import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -34,6 +33,7 @@ import org.talend.core.model.metadata.builder.connection.DelimitedFileConnection
 import org.talend.core.model.metadata.builder.connection.Escape;
 import org.talend.core.model.metadata.builder.connection.MetadataColumn;
 import org.talend.core.model.metadata.builder.database.JavaSqlFactory;
+import org.talend.core.utils.CsvArray;
 import org.talend.cwm.helper.ColumnHelper;
 import org.talend.cwm.helper.ModelElementHelper;
 import org.talend.cwm.management.i18n.Messages;
@@ -59,8 +59,6 @@ import org.talend.utils.sql.ResultSetUtils;
 import org.talend.utils.sql.TalendTypeConvert;
 import org.talend.utils.sugars.ReturnCode;
 import orgomg.cwm.objectmodel.core.ModelElement;
-
-import com.talend.csv.CSVReader;
 
 /**
  * DOC qiongli class global comment. Detailled comment
@@ -195,16 +193,13 @@ public class ColumnSetIndicatorEvaluator extends Evaluator<String> {
             returnCode.setReturnCode(Messages.getString("ColumnSetIndicatorEvaluator.FileNotFound", file.getName()), false); //$NON-NLS-1$ 
             return returnCode;
         }
-        CSVReader csvReader = null;
         try {
             List<ModelElement> analysisElementList = this.analysis.getContext().getAnalysedElements();
             EMap<Indicator, AnalyzedDataSet> indicToRowMap = analysis.getResults().getIndicToRowMap();
             indicToRowMap.clear();
 
             if (Escape.CSV.equals(fileConnection.getEscapeType())) {
-                // use CsvReader to parse.
-                csvReader = FileUtils.createCsvReader(file, fileConnection);
-                this.useCsvReader(csvReader, file, fileConnection, analysisElementList);
+                this.useCsv(fileConnection, analysisElementList);
             } else {
                 // use TOSDelimitedReader in FileInputDelimited to parse.
                 FileInputDelimited fileInputDelimited = AnalysisExecutorHelper.createFileInputDelimited(fileConnection);
@@ -223,7 +218,7 @@ public class ColumnSetIndicatorEvaluator extends Evaluator<String> {
                     for (int i = 0; i < columsCount; i++) {
                         rowValues[i] = fileInputDelimited.get(i);
                     }
-                    orgnizeObjectsToHandel(path, rowValues, currentRow, analysisElementList, rowSeparator);
+                    orgnizeObjectsToHandel(path, rowValues, currentRow, analysisElementList);
                 }
                 // TDQ-5851~
                 fileInputDelimited.close();
@@ -231,39 +226,26 @@ public class ColumnSetIndicatorEvaluator extends Evaluator<String> {
         } catch (Exception e) {
             log.error(e, e);
             returnCode.setReturnCode(e.getMessage(), false);
-        } finally {
-            if (csvReader != null) {
-                try {
-                    csvReader.close();
-                } catch (IOException e) {
-                    log.error(e, e);
-                }
-            }
         }
 
         return returnCode;
     }
 
-    private void useCsvReader(CSVReader csvReader, File file, DelimitedFileConnection dfCon,
+    private void useCsv(DelimitedFileConnection fileConnection,
             List<ModelElement> analysisElementList) throws Exception {
-
-        FileUtils.initializeCsvReader(dfCon, csvReader);
-
         long currentRecord = 0;
-        int limitValue = JavaSqlFactory.getLimitValue(dfCon);
-        int headValue = JavaSqlFactory.getHeadValue(dfCon);
-        for (int i = 0; i < headValue && csvReader.readNext(); i++) {
-            // do nothing, just ignore the header part
-        }
-
-        while (csvReader.readNext()) {
+        int limitValue = JavaSqlFactory.getLimitValue(fileConnection);
+        int headValue = JavaSqlFactory.getHeadValue(fileConnection);
+        CsvArray csvArray = FileUtils.getArrayFromCsv(fileConnection, limitValue, headValue);
+        for (String[] values : csvArray.getRows()) {
             currentRecord++;
+            if (currentRecord <= headValue) {
+                continue;
+            }
             if (!continueRun() || limitValue != -1 && currentRecord > limitValue) {
                 break;
             }
-            String[] rowValues = csvReader.getValues();
-            this.orgnizeObjectsToHandel(dfCon.getFilePath(), rowValues, currentRecord, analysisElementList,
-                    dfCon.getFieldSeparatorValue());
+            this.orgnizeObjectsToHandel(fileConnection.getFilePath(), values, currentRecord, analysisElementList);
 
         }
     }
@@ -278,7 +260,7 @@ public class ColumnSetIndicatorEvaluator extends Evaluator<String> {
      * @param separator
      */
     private void orgnizeObjectsToHandel(String fileName, String[] rowValues, long currentRow,
-            List<ModelElement> analysisElementList, String separator) {
+            List<ModelElement> analysisElementList) {
         EList<Object> objectLs = new BasicEList<Object>();
         MetadataColumn mColumn = null;
         Object object = null;
@@ -319,7 +301,7 @@ public class ColumnSetIndicatorEvaluator extends Evaluator<String> {
      * @throws SQLException
      */
     private void handleObjects(EList<Object> objectLs, ResultSet resultSet) throws SQLException {
-        if (objectLs.size() == 0) {
+        if (objectLs.isEmpty()) {
             return;
         }
         EList<Indicator> indicators = analysis.getResults().getIndicators();

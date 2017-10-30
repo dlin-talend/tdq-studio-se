@@ -28,6 +28,7 @@ import org.talend.core.model.metadata.builder.connection.Escape;
 import org.talend.core.model.metadata.builder.connection.MetadataColumn;
 import org.talend.core.model.metadata.builder.connection.MetadataTable;
 import org.talend.core.model.metadata.builder.database.JavaSqlFactory;
+import org.talend.core.utils.CsvArray;
 import org.talend.cwm.helper.ColumnHelper;
 import org.talend.dataquality.matchmerge.Record;
 import org.talend.dq.helper.AnalysisExecutorHelper;
@@ -35,8 +36,6 @@ import org.talend.dq.helper.FileUtils;
 import org.talend.fileprocess.FileInputDelimited;
 import orgomg.cwm.foundation.softwaredeployment.DataManager;
 import orgomg.cwm.objectmodel.core.ModelElement;
-
-import com.talend.csv.CSVReader;
 
 /**
  * DOC yyin class global comment. Detailled comment
@@ -104,14 +103,9 @@ public class DelimitedFileSQLExecutor extends SQLExecutor {
     private void useCsvReader(File file, DelimitedFileConnection delimitedFileconnection, List<ModelElement> analysisElementList) {
         int tableLimit = getLimit();
         int connLimit = JavaSqlFactory.getLimitValue(delimitedFileconnection);
-        // TDQ-14373: fix the "Limit" in analysis editor doesn't work
-        int limitValue = connLimit <= 0 ? tableLimit : (tableLimit < connLimit ? tableLimit : connLimit);
+        int limitValue = tableLimit < connLimit ? tableLimit : connLimit;
         int headValue = JavaSqlFactory.getHeadValue(delimitedFileconnection);
-        CSVReader csvReader = null;
         try {
-            csvReader = FileUtils.createCsvReader(file, delimitedFileconnection);
-            FileUtils.initializeCsvReader(delimitedFileconnection, csvReader);
-
             int analysedColumnIndex[] = new int[analysisElementList.size()];
             // need to find the analysed element position , and only get these analysed column's values.
             MetadataColumn mColumn = (MetadataColumn) analysisElementList.get(0);
@@ -128,7 +122,9 @@ public class DelimitedFileSQLExecutor extends SQLExecutor {
             }
 
             long currentRecord = 0;
-            while (csvReader.readNext()) {
+
+            CsvArray csvArray = FileUtils.getArrayFromCsv(delimitedFileconnection, limitValue, headValue);
+            for (String[] values : csvArray.getRows()) {
                 // MOD msjian TDQ-14284: fix the file connection which set "CSV" can not show data.
                 currentRecord++;
                 // skip the head rows
@@ -140,25 +136,14 @@ public class DelimitedFileSQLExecutor extends SQLExecutor {
                     break;
                 }
                 // only get the analysed columns' values
-                String[] values = csvReader.getValues();
                 String[] analysedValues = new String[analysisElementList.size()];
                 for (int i = 0; i < analysedColumnIndex.length; i++) {
                     analysedValues[i] = values[analysedColumnIndex[i]];
                 }
                 handleRow(analysedValues);
             }
-        } catch (IOException e) {
-            log.error(e.getMessage(), e);
         } catch (Exception e) {
             log.error(e.getMessage(), e);
-        } finally {
-            if (csvReader != null) {
-                try {
-                    csvReader.close();
-                } catch (IOException e) {
-                    log.error(e.getMessage(), e);
-                }
-            }
         }
     }
 

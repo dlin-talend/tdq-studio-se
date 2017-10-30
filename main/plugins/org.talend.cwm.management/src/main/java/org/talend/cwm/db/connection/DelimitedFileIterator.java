@@ -18,6 +18,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.talend.core.model.metadata.builder.connection.DelimitedFileConnection;
@@ -53,6 +54,8 @@ public class DelimitedFileIterator implements Iterator<Record> {
                 fileReader = new FileDelimitedReader(file, delimitedFileconnection, analysisElementList);
             }
         } catch (IOException e) {
+            log.error(e, e);
+        } catch (CoreException e) {
             log.error(e, e);
         }
     }

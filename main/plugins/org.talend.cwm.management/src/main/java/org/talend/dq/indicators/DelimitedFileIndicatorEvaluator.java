@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.emf.common.util.EMap;
@@ -34,6 +35,7 @@ import org.talend.core.model.metadata.builder.connection.MetadataColumn;
 import org.talend.core.model.metadata.builder.connection.MetadataTable;
 import org.talend.core.model.metadata.builder.database.JavaSqlFactory;
 import org.talend.core.runtime.CoreRuntimePlugin;
+import org.talend.core.utils.CsvArray;
 import org.talend.cwm.helper.ColumnHelper;
 import org.talend.cwm.management.i18n.Messages;
 import org.talend.dataquality.PluginConstant;
@@ -51,8 +53,6 @@ import org.talend.fileprocess.FileInputDelimited;
 import org.talend.utils.sql.TalendTypeConvert;
 import org.talend.utils.sugars.ReturnCode;
 import orgomg.cwm.objectmodel.core.ModelElement;
-
-import com.talend.csv.CSVReader;
 
 /**
  * DOC qiongli class global comment. Detailled comment
@@ -236,36 +236,22 @@ public class DelimitedFileIndicatorEvaluator extends IndicatorEvaluator {
         ReturnCode returnCode = new ReturnCode(true);
         int limitValue = getCsvReaderLimit();
         int headValue = JavaSqlFactory.getHeadValue(delimitedFileconnection);
-        CSVReader csvReader = null;
         try {
-            csvReader = FileUtils.createCsvReader(file, delimitedFileconnection);
-
-            FileUtils.initializeCsvReader(delimitedFileconnection, csvReader);
-
-            for (int i = 0; i < headValue && csvReader.readNext(); i++) {
-                // do nothing, just ignore the header part
-            }
-            String[] rowValues = null;
+            CsvArray csvArray = FileUtils.getArrayFromCsv(delimitedFileconnection, limitValue, headValue);
             long currentRecord = 0;
-            while (csvReader.readNext()) {
+            for (String[] rowValues : csvArray.getRows()) {
                 currentRecord++;
+                if (currentRecord <= headValue) {
+                    continue;
+                }
                 if (!continueRun() || limitValue != -1 && currentRecord > limitValue) {
                     break;
                 }
-                rowValues = csvReader.getValues();
                 returnCode.setOk(returnCode.isOk()
                         && handleByARow(rowValues, currentRecord, analysisElementList, columnElementList, indicToRowMap).isOk());
             }
-        } catch (IOException e) {
+        } catch (CoreException e) {
             log.error(e, e);
-        } finally {
-            if (csvReader != null) {
-                try {
-                    csvReader.close();
-                } catch (IOException e) {
-                    log.error(e, e);
-                }
-            }
         }
         return returnCode;
     }
