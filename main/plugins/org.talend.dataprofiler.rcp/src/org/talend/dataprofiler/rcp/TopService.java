@@ -501,8 +501,4 @@ public class TopService implements ICoreService {
         ProxyRepositoryFactory.getInstance().executeRepositoryWorkUnit(workUnit);
     }
 
-    @Override
-    public void initMavenCodeProjects() {
-        throw new UnsupportedOperationException();
-    }
 }
