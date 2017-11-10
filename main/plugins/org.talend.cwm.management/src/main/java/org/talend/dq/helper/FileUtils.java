@@ -236,6 +236,11 @@ public final class FileUtils {
             }
         }
 
+        String fieldSeparatorValue = JavaSqlFactory.getFieldSeparatorValue(delimitedFileconnection);
+        if (fieldSeparatorValue != null && fieldSeparatorValue.length() > 0) {
+            csvReader.setSeparator(ParameterUtil.trimParameter(fieldSeparatorValue).charAt(0));
+        }
+
         csvReader.setSkipEmptyRecords(true);
         String textEnclosure = delimitedFileconnection.getTextEnclosure();
         if (textEnclosure != null && textEnclosure.length() > 0) {
